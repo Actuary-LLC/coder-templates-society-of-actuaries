@@ -175,4 +175,6 @@ Local pushes use your own `coder login` session; they never promote.
   failure but not on hard cancellation.
 - **Workspace creation fails with "image not found" / pull errors**: the
   Society image is missing or private — check the `build-image` workflow run
-  and the package visibility note above.
+  and the package visibility note above. A private package shows up as
+  `unauthorized` on the `.../manifests/latest` pull in the build log (the
+  provisioner's Docker host is not logged into GHCR).
