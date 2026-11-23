@@ -1,0 +1,56 @@
+# Builds and publishes the Society workspace image to GHCR.
+#
+# The image name is this repository (ghcr.io/actuary-llc/coder-templates-
+# society-of-actuaries) so the template and its image live in one place.
+# The template's `docker_image` parameter defaults to the :latest tag this
+# workflow pushes. See context/ci-cd.md for the full pipeline runbook.
+
+name: build-image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "templates/Society/image/**"
+      - "templates/Society/scripts/csv2db"
+      - ".github/workflows/build-image.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}
+          tags: |
+            type=raw,value=latest
+            type=sha
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: templates/Society
+          file: templates/Society/image/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

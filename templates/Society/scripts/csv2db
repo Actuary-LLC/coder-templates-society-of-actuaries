@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+"""csv2db - load CSV files into a database and run quick SQL queries.
+
+Uses DuckDB (.duckdb) or SQLite (.sqlite/.db) as the target database.
+Backed by pandas + duckdb (both baked into the workspace image).
+
+Examples:
+  csv2db import data.csv                            # -> data.duckdb, table "data"
+  csv2db import data.csv --table policies
+  csv2db import a.csv b.csv --db study.duckdb
+  csv2db import data.csv --db local.sqlite
+  csv2db query "SELECT * FROM policies LIMIT 5" --db data.duckdb
+  csv2db tables --db data.duckdb
+
+The raw commands this wraps are documented in the template README.
+"""
+
+import argparse
+import re
+import sys
+from pathlib import Path
+
+IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def die(msg):
+    print(f"csv2db: error: {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+def check_identifier(name):
+    if not IDENT_RE.match(name):
+        die(f"invalid table name {name!r} (use letters, digits, underscore; "
+            "must not start with a digit)")
+    return name
+
+
+def db_kind(path):
+    suffix = Path(path).suffix.lower()
+    if suffix in (".sqlite", ".db", ".sqlite3"):
+        return "sqlite"
+    return "duckdb"  # .duckdb and anything else default to DuckDB
+
+
+def import_csvs(csv_paths, db, table, if_exists):
+    import pandas as pd
+
+    kind = db_kind(db)
+    for csv_path in csv_paths:
+        p = Path(csv_path)
+        if not p.is_file():
+            die(f"no such file: {csv_path}")
+        name = check_identifier(table or p.stem)
+        df = pd.read_csv(p)
+        if kind == "sqlite":
+            import sqlite3
+            with sqlite3.connect(db) as con:
+                df.to_sql(name, con, if_exists=if_exists, index=False)
+                count = con.execute(f'SELECT COUNT(*) FROM "{name}"').fetchone()[0]
+        else:
+            import duckdb
+            con = duckdb.connect(db)
+            try:
+                if if_exists == "replace":
+                    con.execute(f'CREATE OR REPLACE TABLE "{name}" AS '
+                                f"SELECT * FROM df")
+                else:
+                    con.execute(f'CREATE TABLE IF NOT EXISTS "{name}" AS '
+                                f"SELECT * FROM df WHERE 1=0")
+                    con.execute(f'INSERT INTO "{name}" SELECT * FROM df')
+                count = con.execute(f'SELECT COUNT(*) FROM "{name}"').fetchone()[0]
+            finally:
+                con.close()
+        print(f"loaded {count} rows from {csv_path} into {db} -> {name}")
+
+
+def run_query(db, sql):
+    import pandas as pd
+
+    kind = db_kind(db)
+    try:
+        if kind == "sqlite":
+            import sqlite3
+            with sqlite3.connect(db) as con:
+                df = pd.read_sql_query(sql, con)
+        else:
+            import duckdb
+            con = duckdb.connect(db, read_only=True)
+            try:
+                df = con.execute(sql).df()
+            finally:
+                con.close()
+    except Exception as exc:  # surface driver errors without a traceback
+        die(f"query failed: {exc}")
+    if df.empty:
+        print("(no rows)")
+    else:
+        print(df.to_string(index=False))
+    print(f"({len(df)} rows)")
+
+
+def list_tables(db):
+    kind = db_kind(db)
+    if kind == "sqlite":
+        sql = ("SELECT name AS \"table\" FROM sqlite_master "
+               "WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
+    else:
+        sql = ("SELECT table_name AS \"table\" FROM information_schema.tables "
+               "WHERE table_schema = 'main' ORDER BY table_name")
+    run_query(db, sql)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog="csv2db",
+        description="Load CSV files into DuckDB/SQLite and run quick SQL queries.",
+    )
+    sub = parser.add_subparsers(dest="cmd", required=True)
+
+    p_import = sub.add_parser("import", help="load CSV file(s) into a database")
+    p_import.add_argument("csv", nargs="+", help="CSV file(s) to load")
+    p_import.add_argument("--db", default=None,
+                          help="database file (default: <first csv>.duckdb)")
+    p_import.add_argument("--table", default=None,
+                          help="table name (default: each CSV's file stem)")
+    p_import.add_argument("--if-exists", choices=["replace", "append"],
+                          default="replace",
+                          help="when the table already exists (default: replace)")
+
+    p_query = sub.add_parser("query", help="run a SQL query against a database")
+    p_query.add_argument("sql", help="SQL to run")
+    p_query.add_argument("--db", required=True, help="database file")
+
+    p_tables = sub.add_parser("tables", help="list tables in a database")
+    p_tables.add_argument("--db", required=True, help="database file")
+
+    args = parser.parse_args()
+
+    if args.cmd == "import":
+        db = args.db or f"{Path(args.csv[0]).stem}.duckdb"
+        import_csvs(args.csv, db, args.table, args.if_exists)
+    elif args.cmd == "query":
+        run_query(args.db, args.sql)
+    elif args.cmd == "tables":
+        list_tables(args.db)
+
+
+if __name__ == "__main__":
+    main()

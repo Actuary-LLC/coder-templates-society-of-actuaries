@@ -1,0 +1,39 @@
+# Python packages for SOA ATPA / PA / SRM exam work.
+# Versions are current at image build time; the image is rebuilt whenever
+# this file changes (see ../../../../.github/workflows/build-image.yml).
+# torch is installed separately (CPU-only wheels) in the Dockerfile.
+
+# Core data handling (ATPA: ETL, joins, data pipelines)
+numpy
+pandas
+scipy
+
+# Statistics and models
+statsmodels        # GLMs with offsets/weights, MixedLM (ATPA), AR/ARCH (SRM)
+scikit-learn       # PCA, clustering, trees, forests, boosting, KNN, CV, ROC/AUC, PDP/ICE
+xgboost            # named in the PA module topics (GBM)
+pygam              # ATPA additive models
+pymc               # ATPA Bayesian techniques
+arviz              # Bayesian diagnostics
+shap               # ATPA Shapley values
+mlxtend            # ATPA stacking/blending
+
+# Visualization (PA: data exploration and presentation)
+matplotlib
+seaborn
+plotly
+
+# Time series (SRM: exponential smoothing, AR, ARCH)
+pmdarima
+arch
+
+# Data sources and deliverables
+openpyxl           # Excel data sources
+python-docx        # ATPA Word report deliverable
+
+# Databases / SQL (ATPA: relational databases, ETL)
+sqlalchemy
+duckdb             # DuckDB engine: query CSVs and databases with SQL
+duckdb-engine      # SQLAlchemy driver for DuckDB
+psycopg2-binary    # connect to external PostgreSQL databases
+requests
