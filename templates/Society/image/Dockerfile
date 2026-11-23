@@ -30,7 +30,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Workspace user; the template bind-mounts the persistent home over /home/coder.
-RUN useradd -m -s /bin/bash -u 1000 coder \
+# The stock ubuntu image ships an "ubuntu" user (and group) on UID/GID 1000,
+# so they are removed first — the container must run as uid 1000 to match the
+# NAS home directory's expectations.
+RUN userdel -r ubuntu 2>/dev/null; groupdel ubuntu 2>/dev/null; \
+    useradd -m -s /bin/bash -u 1000 coder \
     && echo 'coder ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/coder
 
 # --- Python ------------------------------------------------------------------
