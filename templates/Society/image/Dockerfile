@@ -42,7 +42,8 @@ COPY image/python-requirements.txt /tmp/python-requirements.txt
 # Upgrade pip first (the distro pip's resolver backtracks into ancient
 # sdists) and allow wheels only — every pinned package has Python 3.12
 # wheels, and sdist builds break on modern setuptools (no pkg_resources).
-RUN pip3 install --break-system-packages --no-cache-dir --upgrade pip \
+# --ignore-installed because the Debian-managed pip cannot be uninstalled.
+RUN pip3 install --break-system-packages --no-cache-dir --ignore-installed pip \
     && pip3 install --break-system-packages --no-cache-dir --only-binary=:all: \
          -r /tmp/python-requirements.txt \
     && pip3 install --break-system-packages --no-cache-dir torch \
