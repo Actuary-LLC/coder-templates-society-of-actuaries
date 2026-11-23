@@ -1,0 +1,108 @@
+name: Test and publish templates
+
+# Every push uploads each template as an INACTIVE version to the Coder
+# deployment, boots a throwaway workspace from it, smoke-tests it, and
+# deletes it. Only pushes to main then promote the tested version to active.
+#
+# Publishing is gated on the CODER_URL repository variable being set, so
+# repositories generated from this template skip CI until configured.
+# See context/ci-cd.md for setup and token rotation.
+
+on:
+  push:
+    branches: ["**"]
+  workflow_dispatch:
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    if: ${{ vars.CODER_URL != '' }}
+    env:
+      CODER_URL: ${{ vars.CODER_URL }}
+      # Newer coder CLIs require explicit org selection for org-scoped commands.
+      CODER_ORG: ${{ vars.CODER_ORG || 'coder' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: latest
+          terraform_wrapper: false
+
+      - name: Set up Coder CLI
+        uses: coder/setup-action@v1
+        with:
+          access_url: ${{ vars.CODER_URL }}
+          coder_session_token: ${{ secrets.CODER_SESSION_TOKEN }}
+
+      - name: Push, test, and (on main) activate each template
+        shell: bash
+        run: |
+          set -uo pipefail
+
+          version="$(git rev-parse --short HEAD)"
+          if [ "$GITHUB_REF_NAME" != "main" ]; then
+            version="$(printf '%s' "$GITHUB_REF_NAME" | tr '/' '-')-${version}"
+          fi
+          message="$(git log --format=%s -n 1)"
+
+          failed=0
+          for dir in templates/*/; do
+            [ -e "$dir/main.tf" ] || continue
+            name="$(basename "$dir")"
+            ws="ci-${name}-${GITHUB_RUN_ID}"
+            echo "::group::Template: $name (version: $version)"
+
+            if ! coder templates push "$name" \
+              --org "$CODER_ORG" \
+              --directory "$dir" \
+              --name "$version" \
+              --message "$message" \
+              --activate=false \
+              --yes; then
+              echo "::error::push failed for $name"
+              failed=1
+              echo "::endgroup::"
+              continue
+            fi
+
+            created=0
+            smoke_ok=0
+            if coder create --template "$name" --template-version "$version" \
+              --org "$CODER_ORG" \
+              --use-parameter-defaults "$ws" --yes; then
+              created=1
+              if coder ssh "$ws" -- sh -c 'echo "smoke test ok: $(uname -a)"'; then
+                smoke_ok=1
+              fi
+            fi
+
+            # Always clean up the throwaway workspace.
+            if [ "$created" -eq 1 ]; then
+              coder delete "$ws" --yes || true
+            fi
+
+            if [ "$smoke_ok" -ne 1 ]; then
+              echo "::error::test workspace failed for $name"
+              failed=1
+              echo "::endgroup::"
+              continue
+            fi
+
+            if [ "$GITHUB_REF_NAME" = "main" ]; then
+              echo "Promoting $name version $version to active"
+              coder templates versions promote \
+                --org "$CODER_ORG" \
+                --template "$name" \
+                --template-version "$version" || failed=1
+            fi
+            echo "::endgroup::"
+          done
+
+          exit "$failed"

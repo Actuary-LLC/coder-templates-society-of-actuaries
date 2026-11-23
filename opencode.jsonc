@@ -1,0 +1,23 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      // Workspace/template tools for the Coder deployment.
+      // Requires `coder login <url>` (uses the CLI's session).
+      "coder": {
+        "type": "local",
+        "command": ["coder", "exp", "mcp", "server"]
+      },
+      // Live Terraform Registry provider docs (coder/coder, docker, ...).
+      // Launched via the wrapper so it works with either the pre-compiled
+      // terraform-mcp-server binary or Docker (whichever is available).
+      // One-time setup per machine: install the binary into ~/.local/bin
+      // from https://releases.hashicorp.com/terraform-mcp-server/
+      // (see context/terraform-provider.md).
+      "terraform": {
+        "type": "local",
+        "command": ["bash", "scripts/mcp-terraform.sh"]
+      }
+    }
+  }
+}

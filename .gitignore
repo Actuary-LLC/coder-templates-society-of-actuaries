@@ -1,0 +1,19 @@
+# Local environment (never commit real values)
+.env
+.env.*
+!.env.example
+
+# Terraform artifacts (lockfiles ARE committed)
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+override.tf
+override.tf.json
+crash.log
+crash.*.log
+
+# Editors / OS
+.DS_Store
+*.swp
