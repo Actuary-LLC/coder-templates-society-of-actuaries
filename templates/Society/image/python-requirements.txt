@@ -1,39 +1,41 @@
 # Python packages for SOA ATPA / PA / SRM exam work.
-# Versions are current at image build time; the image is rebuilt whenever
-# this file changes (see ../../../../.github/workflows/build-image.yml).
-# torch is installed separately (CPU-only wheels) in the Dockerfile.
+#
+# Versions are pinned to a set verified to resolve together for Python 3.12
+# (wheels only) — unpinned installs made the resolver backtrack into ancient
+# sdists that no longer build. torch is installed separately (CPU-only
+# wheels) in the Dockerfile.
 
 # Core data handling (ATPA: ETL, joins, data pipelines)
-numpy
-pandas
-scipy
+numpy==2.5.5
+pandas==3.1.1
+scipy==1.16.3
 
 # Statistics and models
-statsmodels        # GLMs with offsets/weights, MixedLM (ATPA), AR/ARCH (SRM)
-scikit-learn       # PCA, clustering, trees, forests, boosting, KNN, CV, ROC/AUC, PDP/ICE
-xgboost            # named in the PA module topics (GBM)
-pygam              # ATPA additive models
-pymc               # ATPA Bayesian techniques
-arviz              # Bayesian diagnostics
-shap               # ATPA Shapley values
-mlxtend            # ATPA stacking/blending
+statsmodels==0.15.0   # GLMs with offsets/weights, MixedLM (ATPA), AR/ARCH (SRM)
+scikit-learn==1.9.1   # PCA, clustering, trees, forests, boosting, KNN, CV, ROC/AUC, PDP/ICE
+xgboost==3.4.1        # named in the PA module topics (GBM)
+pygam==0.12.0         # ATPA additive models
+pymc==6.3.2           # ATPA Bayesian techniques
+arviz==1.3.0          # Bayesian diagnostics
+shap==0.54.1          # ATPA Shapley values
+mlxtend==0.25.0       # ATPA stacking/blending
 
 # Visualization (PA: data exploration and presentation)
-matplotlib
-seaborn
-plotly
+matplotlib==3.11.2
+seaborn==0.13.2
+plotly==7.1.0
 
 # Time series (SRM: exponential smoothing, AR, ARCH)
-pmdarima
-arch
+pmdarima==2.1.1
+arch==9.0.0
 
 # Data sources and deliverables
-openpyxl           # Excel data sources
-python-docx        # ATPA Word report deliverable
+openpyxl==3.1.5       # Excel data sources
+python-docx==1.2.0    # ATPA Word report deliverable
 
 # Databases / SQL (ATPA: relational databases, ETL)
-sqlalchemy
-duckdb             # DuckDB engine: query CSVs and databases with SQL
-duckdb-engine      # SQLAlchemy driver for DuckDB
-psycopg2-binary    # connect to external PostgreSQL databases
-requests
+sqlalchemy==2.1.9
+duckdb==2.0.1         # DuckDB engine: query CSVs and databases with SQL
+duckdb-engine==0.17.0 # SQLAlchemy driver for DuckDB
+psycopg2-binary==2.9.13  # connect to external PostgreSQL databases
+requests==2.34.2
