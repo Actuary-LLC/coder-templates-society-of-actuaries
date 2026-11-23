@@ -17,3 +17,7 @@ crash.*.log
 # Editors / OS
 .DS_Store
 *.swp
+
+# Python bytecode (csv2db helper)
+__pycache__/
+*.pyc

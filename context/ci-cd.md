@@ -9,11 +9,33 @@ deployment, and how to rotate credentials. Keep this file in sync with
 | Workflow | Trigger | What it does |
 |----------|---------|--------------|
 | `lint.yml` | every PR and push to `main` | `terraform fmt -check`, `init -backend=false`, `validate`, tflint (via `scripts/check.sh`) |
+| `build-image.yml` | push to `main` touching `templates/Society/**` image files (incl. `scripts/csv2db`) + manual dispatch | builds `templates/Society/image/Dockerfile` and pushes it to GHCR as `ghcr.io/actuary-llc/coder-templates-society-of-actuaries` (`latest` + `<sha>`) |
 | `publish-template.yml` | every push to any branch + manual dispatch | pushes each `templates/*` as an **inactive** template version, boots a throwaway test workspace from it, smoke-tests via `coder ssh`, deletes it — and **only on `main`**, promotes the tested version to active |
 
 So: pushing to a branch deploys a *test* version to the Coder instance;
 merging to `main` promotes a version that has already booted successfully.
 The active template never changes without a passing test workspace.
+
+### The Society workspace image (`build-image.yml`)
+
+The `Society` template boots a prebuilt image (Python, R, Julia, RStudio
+Server, code-server, OpenCode, DuckDB/SQLite) built from
+`templates/Society/image/Dockerfile`. The workflow publishes it to GHCR under
+this repository's name — image and template live in one location.
+
+- Auth is the built-in `GITHUB_TOKEN` (`packages: write`); no extra secret.
+- Tags: `latest` (what the template's `docker_image` parameter defaults to)
+  and `sha-<short-sha>`.
+- **First-time / image visibility**: after the first push, open the package
+  on GitHub (org → Packages) and either make it **public**, or log the
+  provisioner's Docker host into GHCR — otherwise workspace creation fails
+  pulling the image.
+- The first build downloads torch, ~40 R packages, and ~30 Julia packages;
+  expect 30–60 minutes. Later builds use the GitHub Actions cache.
+- `publish-template.yml` does **not** wait for image builds. If a template
+  change lands together with an image change, its test workspace may briefly
+  boot the previous `:latest` — pin `docker_image` to the `sha-` tag when that
+  matters.
 
 ### Template naming
 
@@ -151,3 +173,6 @@ Local pushes use your own `coder login` session; they never promote.
   don't reuse SHAs across force-pushes — amend the commit instead.
 - **Leftover `ci-*` workspaces**: safe to delete; the workflow cleans up on
   failure but not on hard cancellation.
+- **Workspace creation fails with "image not found" / pull errors**: the
+  Society image is missing or private — check the `build-image` workflow run
+  and the package visibility note above.

@@ -25,9 +25,14 @@ with AI assistance. Create a new repo from it and you get:
 │   ├── git-auth.md               #   GitHub auth in workspaces
 │   └── ci-cd.md                  #   CI setup, secrets, token rotation
 ├── templates/
-│   └── docker/                   # starter template (dir name = template name)
+│   ├── docker/                   # starter template (dir name = template name)
+│   └── Society/                  # Society of Actuaries exam workspace
+│       ├── image/                #   Dockerfile + package manifests (built by CI)
+│       └── scripts/              #   startup.sh + csv2db helper
+├── icon/                         # template logos (referenced by README front matter)
 ├── .github/workflows/
 │   ├── lint.yml                  # fmt/validate/tflint on PRs
+│   ├── build-image.yml           # Society workspace image -> GHCR
 │   └── publish-template.yml      # test against Coder, deploy on main
 ├── Makefile                      # make check / push / test-workspace
 └── scripts/check.sh              # local validation
