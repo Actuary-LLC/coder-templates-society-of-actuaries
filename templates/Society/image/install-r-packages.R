@@ -21,7 +21,7 @@ pkgs <- c(
   "forecast", "rugarch", "tseries", "class", "MASS", "cluster",
   # ATPA learning objectives: additive/mixed models, neural nets, Bayesian,
   # stacking/blending, Shapley values, PDP/ICE, imputation, unbalanced data
-  "mgcv", "lme4", "nnet", "brms", "fastshap", "pdp", "DALEX",
+  "mgcv", "lme4", "nnet", "brms", "iml", "pdp", "DALEX",
   "caretEnsemble", "mice", "themis", "officer",
   # Databases / SQL
   "DBI", "odbc", "duckdb", "RSQLite", "RPostgres",
