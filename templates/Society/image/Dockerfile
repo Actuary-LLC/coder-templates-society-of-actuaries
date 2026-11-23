@@ -20,7 +20,7 @@ ARG RSTUDIO_SERVER_VERSION=2026.11.0-203
 
 # --- base system -------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      ca-certificates curl wget git jq unzip zip sudo less \
+      ca-certificates curl wget git jq unzip zip sudo less gnupg \
       build-essential gfortran cmake pkg-config \
       python3 python3-pip python3-venv python3-dev \
       libcurl4-openssl-dev libssl-dev libxml2-dev libgit2-dev \
@@ -42,11 +42,12 @@ COPY image/python-requirements.txt /tmp/python-requirements.txt
 # Upgrade pip first (the distro pip's resolver backtracks into ancient
 # sdists) and allow wheels only — every pinned package has Python 3.12
 # wheels, and sdist builds break on modern setuptools (no pkg_resources).
-# --ignore-installed because the Debian-managed pip cannot be uninstalled.
+# --ignore-installed everywhere: Debian-installed Python packages have no
+# RECORD file and cannot be uninstalled; /usr/local shadows them on sys.path.
 RUN pip3 install --break-system-packages --no-cache-dir --ignore-installed pip \
-    && pip3 install --break-system-packages --no-cache-dir --only-binary=:all: \
-         -r /tmp/python-requirements.txt \
-    && pip3 install --break-system-packages --no-cache-dir torch \
+    && pip3 install --break-system-packages --no-cache-dir --ignore-installed \
+         --only-binary=:all: -r /tmp/python-requirements.txt \
+    && pip3 install --break-system-packages --no-cache-dir --ignore-installed torch \
          --index-url https://download.pytorch.org/whl/cpu
 
 # Lets users `pip install --user <pkg>` into the persistent home without
